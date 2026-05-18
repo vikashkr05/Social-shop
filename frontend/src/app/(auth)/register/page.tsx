@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import RegisterForm from '@/components/auth/RegisterForm';
 
 export default function RegisterPage() {

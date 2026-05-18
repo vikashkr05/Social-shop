@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import Navbar from '@/components/layout/Navbar';
 import AuthGuard from '@/components/layout/AuthGuard';
 import Feed from '@/components/feed/Feed';

@@ -167,3 +167,86 @@ saves       — user_id, post_id           (composite PK)
 docker compose down          # stop containers
 docker compose down -v       # stop and delete volumes (wipes DB data)
 ```
+
+---
+
+## Deployment
+
+The frontend deploys to **Cloudflare Pages** and the backend (+ database, cache, queue) deploys to **Railway**.
+
+```
+Users → Cloudflare Pages (Next.js, global CDN)
+              ↓ HTTPS
+         Railway
+         ├── Spring Boot (backend service)
+         ├── PostgreSQL  (Railway plugin)
+         ├── Redis       (Railway plugin)
+         └── Kafka       (Upstash — external free tier)
+```
+
+### Backend → Railway
+
+**Prerequisites:** [Railway account](https://railway.app) · [Railway CLI](https://docs.railway.app/guides/cli) (`npm i -g @railway/cli`)
+
+1. Create a new Railway project and link the repo
+2. Set the **Root Directory** of the backend service to `backend/`
+3. Add a **PostgreSQL** plugin and a **Redis** plugin from the Railway dashboard — connection URLs are injected automatically
+4. Sign up at [upstash.com](https://upstash.com), create a Kafka cluster, and note the bootstrap URL and credentials
+5. Set these environment variables in Railway:
+
+| Variable | Value |
+|---|---|
+| `SPRING_DATASOURCE_URL` | Injected by Railway PostgreSQL plugin |
+| `SPRING_DATASOURCE_USERNAME` | Injected by Railway PostgreSQL plugin |
+| `SPRING_DATASOURCE_PASSWORD` | Injected by Railway PostgreSQL plugin |
+| `SPRING_DATA_REDIS_HOST` | Injected by Railway Redis plugin |
+| `SPRING_DATA_REDIS_PORT` | `6379` |
+| `SPRING_KAFKA_BOOTSTRAP_SERVERS` | Upstash bootstrap URL (e.g. `abc-123.upstash.io:9092`) |
+| `KAFKA_SASL_JAAS_CONFIG` | `org.apache.kafka.common.security.scram.ScramLoginModule required username="<user>" password="<pass>";` |
+| `JWT_SECRET` | A random 32+ character string |
+| `APP_AFFILIATE_TAG` | Your Amazon affiliate tag |
+| `CORS_ALLOWED_ORIGINS` | Your Cloudflare Pages URL (e.g. `https://social-shop.pages.dev`) |
+| `SPRING_PROFILES_ACTIVE` | `cloud` |
+
+6. Deploy:
+```bash
+railway up
+```
+
+Railway will build and run the backend using `backend/Dockerfile`.
+
+---
+
+### Frontend → Cloudflare Pages
+
+**Prerequisites:** [Cloudflare account](https://dash.cloudflare.com) · Wrangler already installed as a dev dependency
+
+#### Option A — Connect GitHub (recommended)
+
+1. Go to **Cloudflare Dashboard → Pages → Create a project → Connect to Git**
+2. Select the `Social-shop` repo
+3. Set **Root directory** to `frontend`
+4. Set these build settings:
+
+| Setting | Value |
+|---|---|
+| Build command | `npm run pages:build` |
+| Build output directory | `.vercel/output/static` |
+| Node.js version | `22` |
+
+5. Add environment variables:
+
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | Your Railway backend URL (e.g. `https://social-shop-backend.up.railway.app`) |
+| `NEXT_PUBLIC_AFFILIATE_TAG` | Your affiliate tag |
+
+6. Click **Save and Deploy** — every push to `main` deploys automatically.
+
+#### Option B — Deploy from CLI
+
+```bash
+cd frontend
+npm run pages:build
+npx wrangler pages deploy .vercel/output/static --project-name social-shop
+```
