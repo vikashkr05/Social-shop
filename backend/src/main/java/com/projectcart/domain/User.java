@@ -2,7 +2,6 @@ package com.projectcart.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -28,7 +27,11 @@ public class User {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
-    @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = Instant.now();
+    }
 }

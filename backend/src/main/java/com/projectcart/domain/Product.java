@@ -2,7 +2,6 @@ package com.projectcart.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -30,7 +29,11 @@ public class Product {
     @Column(name = "site_name", length = 100)
     private String siteName;
 
-    @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = Instant.now();
+    }
 }
